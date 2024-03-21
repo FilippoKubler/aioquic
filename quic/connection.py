@@ -1269,6 +1269,7 @@ class QuicConnection:
             self._discard_epoch(epoch)
         self._events.append(self._close_event)
         self._set_state(QuicConnectionState.TERMINATED)
+        print("\n......................................................................................\n\n")
 
         # signal log end
         if self._quic_logger is not None:
