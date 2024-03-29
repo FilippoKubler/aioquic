@@ -1631,7 +1631,6 @@ class QuicConnection:
             # pass data to TLS layer
             try:
                 self.tls.handle_message(event.data, self._crypto_buffers)
-
                 # print(f"Transcript: {self.tls._transcript}")
                 
                 self._push_crypto_data()

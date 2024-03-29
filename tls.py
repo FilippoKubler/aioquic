@@ -1334,7 +1334,13 @@ class Context:
         self._dec_key: Optional[bytes] = None
         self.__logger = logger
 
-        self._transcript = b""
+        self._transcript                        = b""
+        self._client_hello_transcript           = b""
+        self._server_hello_transcript           = b""
+        self._encrypted_extensions_transcript   = b""
+        self._certificate_transcript            = b""
+        self._certificate_verify_transcript     = b""
+        self._finished_transcript               = b""
 
         self._ec_private_key: Optional[ec.EllipticCurvePrivateKey] = None
         self._x25519_private_key: Optional[x25519.X25519PrivateKey] = None
@@ -1634,6 +1640,7 @@ class Context:
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         print(f"Client Hello: {hello}\n")
         print(f"Output Buffer: {output_buf.data}")
+        self._client_hello_transcript = output_buf.data
         self._transcript += output_buf.data
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
@@ -1645,6 +1652,7 @@ class Context:
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         print(f"Server Hello: {peer_hello}\n")
         print(f"Input Buffer: {input_buf.data}")
+        self._server_hello_transcript = input_buf.data
         self._transcript += input_buf.data
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
@@ -1714,6 +1722,7 @@ class Context:
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         print(f"Encrypted Extensions: {encrypted_extensions}\n")
         print(f"Input Buffer: {input_buf.data}")
+        self._encrypted_extensions_transcript = input_buf.data
         self._transcript += input_buf.data
         print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")       
 
@@ -1745,6 +1754,14 @@ class Context:
 
     def _client_handle_certificate(self, input_buf: Buffer) -> None:
         certificate = pull_certificate(input_buf)
+
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print(f"Certificate: {certificate}\n")
+        print(f"Input Buffer: {input_buf.data}")
+        self._certificate_transcript = input_buf.data
+        self._transcript += input_buf.data
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
         self.key_schedule.update_hash(input_buf.data)
 
         self._set_peer_certificate(certificate)
@@ -1767,11 +1784,25 @@ class Context:
                 server_name=self._server_name,
             )
 
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print(f"Certificate Verify: {verify}\n")
+        print(f"Input Buffer: {input_buf.data}")
+        self._certificate_verify_transcript = input_buf.data
+        self._transcript += input_buf.data
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
         self.key_schedule.update_hash(input_buf.data)
         self._set_state(State.CLIENT_EXPECT_FINISHED)
 
     def _client_handle_finished(self, input_buf: Buffer, output_buf: Buffer) -> None:
         finished = pull_finished(input_buf)
+        
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print(f"Finished: {finished}\n")
+        print(f"Input Buffer: {input_buf.data}")
+        self._finished_transcript = input_buf.data
+        self._transcript += input_buf.data
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # check verify data
         expected_verify_data = self.key_schedule.finished_verify_data(self._dec_key)
