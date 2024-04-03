@@ -1341,6 +1341,7 @@ class Context:
         self._certificate_transcript            = b""
         self._certificate_verify_transcript     = b""
         self._finished_transcript               = b""
+        self._client_hanshake_secret            = ""
 
         self._ec_private_key: Optional[ec.EllipticCurvePrivateKey] = None
         self._x25519_private_key: Optional[x25519.X25519PrivateKey] = None

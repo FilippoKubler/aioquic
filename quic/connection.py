@@ -2768,6 +2768,10 @@ class QuicConnection:
         if secrets_log_file is not None:
             label_row = self._is_client == (direction == tls.Direction.DECRYPT)
             label = SECRETS_LABELS[label_row][epoch.value]
+
+            if label == 'CLIENT_HANDSHAKE_TRAFFIC_SECRET':
+                self.tls._client_hanshake_secret = secret.hex()
+
             secrets_log_file.write(
                 "%s %s %s\n" % (label, self.tls.client_random.hex(), secret.hex())
             )
