@@ -101,6 +101,8 @@ class QuicPacketBuilder:
         self._buffer_capacity = max_datagram_size
         self._flight_capacity = max_datagram_size
 
+        self._encrypted_packet = b""
+
     @property
     def packet_is_empty(self) -> bool:
         """
@@ -325,13 +327,18 @@ class QuicPacketBuilder:
             # encrypt in place
             plain = buf.data_slice(self._packet_start, self._packet_start + packet_size)
             buf.seek(self._packet_start)
-            buf.push_bytes(
-                self._packet_crypto.encrypt_packet(
-                    plain[0 : self._header_size],
-                    plain[self._header_size : packet_size],
-                    self._packet_number,
-                )
+            self._encrypted_packet = self._packet_crypto.encrypt_packet(
+                plain[0 : self._header_size],
+                plain[self._header_size : packet_size],
+                self._packet_number,
             )
+            print(self.quic_logger_frames)
+            for frame in self.quic_logger_frames:
+                if frame['frame_type'] == 'crypto':
+                    print('CLIENT - Plaintext Packet:', plain[self._header_size : self._header_size + frame['length'] + 4].hex(), '\n')
+            print('CLIENT - Plaintext Packet:', plain[self._header_size : packet_size].hex(), '\n')
+            print('CLIENT - Encrypted Packet:', self._encrypted_packet[self._header_size : packet_size].hex(), '\n\n')
+            buf.push_bytes(self._encrypted_packet)
             self._packet.sent_bytes = buf.tell() - self._packet_start
             self._packets.append(self._packet)
             if self._packet.in_flight:

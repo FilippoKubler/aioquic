@@ -559,6 +559,7 @@ class QuicConnection:
                         frame_type=self._close_event.frame_type,
                         reason_phrase=self._close_event.reason_phrase,
                     )
+
             self._logger.info(
                 "Connection close sent (code 0x%X, reason %s)",
                 self._close_event.error_code,
@@ -972,6 +973,9 @@ class QuicConnection:
                 plain_header, plain_payload, packet_number = crypto.decrypt_packet(
                     data[start_off:end_off], encrypted_off, space.expected_packet_number
                 )
+
+                print('SERVER - Encrypted Packet:', data[len(plain_header):len(plain_header+plain_payload)].hex(), '\n')
+                print('SERVER - Plaintext Packet:', plain_payload.hex(), '\n\n')
             except KeyUnavailableError as exc:
                 self._logger.debug(exc)
                 if self._quic_logger is not None:
@@ -2768,9 +2772,6 @@ class QuicConnection:
         if secrets_log_file is not None:
             label_row = self._is_client == (direction == tls.Direction.DECRYPT)
             label = SECRETS_LABELS[label_row][epoch.value]
-
-            if label == 'CLIENT_HANDSHAKE_TRAFFIC_SECRET':
-                self.tls._client_hanshake_secret = secret.hex()
 
             secrets_log_file.write(
                 "%s %s %s\n" % (label, self.tls.client_random.hex(), secret.hex())
