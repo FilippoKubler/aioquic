@@ -65,6 +65,8 @@ from .packet_builder import (
 from .recovery import QuicPacketRecovery, QuicPacketSpace
 from .stream import FinalSizeError, QuicStream, StreamFinishedError
 
+from functions import *
+
 logger = logging.getLogger("quic")
 
 CRYPTO_BUFFER_SIZE = 16384
@@ -973,9 +975,6 @@ class QuicConnection:
                 plain_header, plain_payload, packet_number = crypto.decrypt_packet(
                     data[start_off:end_off], encrypted_off, space.expected_packet_number
                 )
-
-                print('SERVER - Encrypted Packet:', data[len(plain_header):len(plain_header+plain_payload)].hex(), '\n')
-                print('SERVER - Plaintext Packet:', plain_payload.hex(), '\n\n')
             except KeyUnavailableError as exc:
                 self._logger.debug(exc)
                 if self._quic_logger is not None:
@@ -1134,6 +1133,8 @@ class QuicConnection:
                 space.ack_queue.add(packet_number)
                 if is_ack_eliciting and space.ack_at is None:
                     space.ack_at = now + self._ack_delay
+
+        quic_packet_decompose('SERVER', quic_logger_frames, plain_payload, data[len(plain_header):len(plain_header+plain_payload)])
 
     def request_key_update(self) -> None:
         """

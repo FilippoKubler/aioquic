@@ -17,6 +17,8 @@ from .packet import (
     is_long_header,
 )
 
+from functions import *
+
 PACKET_LENGTH_SEND_SIZE = 2
 PACKET_NUMBER_SEND_SIZE = 2
 
@@ -332,12 +334,9 @@ class QuicPacketBuilder:
                 plain[self._header_size : packet_size],
                 self._packet_number,
             )
-            print(self.quic_logger_frames)
-            for frame in self.quic_logger_frames:
-                if frame['frame_type'] == 'crypto':
-                    print('CLIENT - Plaintext Packet:', plain[self._header_size : self._header_size + frame['length'] + 4].hex(), '\n')
-            print('CLIENT - Plaintext Packet:', plain[self._header_size : packet_size].hex(), '\n')
-            print('CLIENT - Encrypted Packet:', self._encrypted_packet[self._header_size : packet_size].hex(), '\n\n')
+            
+            quic_packet_decompose('CLIENT', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
+
             buf.push_bytes(self._encrypted_packet)
             self._packet.sent_bytes = buf.tell() - self._packet_start
             self._packets.append(self._packet)
