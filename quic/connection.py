@@ -65,7 +65,7 @@ from .packet_builder import (
 from .recovery import QuicPacketRecovery, QuicPacketSpace
 from .stream import FinalSizeError, QuicStream, StreamFinishedError
 
-from functions import *
+from .functions import *
 
 logger = logging.getLogger("quic")
 

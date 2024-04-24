@@ -17,7 +17,7 @@ from .packet import (
     is_long_header,
 )
 
-from functions import *
+from .functions import *
 
 PACKET_LENGTH_SEND_SIZE = 2
 PACKET_NUMBER_SEND_SIZE = 2
