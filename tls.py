@@ -1341,7 +1341,12 @@ class Context:
         self._certificate_transcript            = b""
         self._certificate_verify_transcript     = b""
         self._finished_transcript               = b""
-        self._client_hanshake_secret            = ""
+
+        self._handshake_secret                  = ""
+        self._client_handshake_secret           = ""
+        self._server_handshake_secret           = ""
+
+        self._http3_request                     = ""
 
         self._ec_private_key: Optional[ec.EllipticCurvePrivateKey] = None
         self._x25519_private_key: Optional[x25519.X25519PrivateKey] = None
@@ -1638,24 +1643,24 @@ class Context:
         with push_message(self._key_schedule_proxy, output_buf):
             push_client_hello(output_buf, hello)
 
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Client Hello: {hello}\n")
-        print(f"Output Buffer: {output_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Client Hello: {hello}\n")
+        # print(f"Output Buffer: {output_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._client_hello_transcript = output_buf.data
         self._transcript += output_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         self._set_state(State.CLIENT_EXPECT_SERVER_HELLO)
 
     def _client_handle_hello(self, input_buf: Buffer, output_buf: Buffer) -> None:
         peer_hello = pull_server_hello(input_buf)
 
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Server Hello: {peer_hello}\n")
-        print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Server Hello: {peer_hello}\n")
+        # print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._server_hello_transcript = input_buf.data
         self._transcript += input_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         cipher_suite = negotiate(
             self._cipher_suites,
@@ -1710,22 +1715,26 @@ class Context:
 
         self.key_schedule.update_hash(input_buf.data)
         self.key_schedule.extract(shared_key)
-
+        
+        self._handshake_secret = self.key_schedule.secret.hex()
+        # print(f'Handshake Secret: {self._handshake_secret}')
+        
         self._setup_traffic_protection(
             Direction.DECRYPT, Epoch.HANDSHAKE, b"s hs traffic"
         )
+        # print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
 
         self._set_state(State.CLIENT_EXPECT_ENCRYPTED_EXTENSIONS)
 
     def _client_handle_encrypted_extensions(self, input_buf: Buffer) -> None:
         encrypted_extensions = pull_encrypted_extensions(input_buf)
 
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Encrypted Extensions: {encrypted_extensions}\n")
-        print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Encrypted Extensions: {encrypted_extensions}\n")
+        # print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")       
         self._encrypted_extensions_transcript = input_buf.data
         self._transcript += input_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")       
 
         self.alpn_negotiated = encrypted_extensions.alpn_protocol
         self.early_data_accepted = encrypted_extensions.early_data
@@ -1733,14 +1742,14 @@ class Context:
         if self.alpn_cb:
             self.alpn_cb(self.alpn_negotiated)
 
+        # print(f'Handshake Secret: {self._handshake_secret}')
+
         self._setup_traffic_protection(
             Direction.ENCRYPT, Epoch.HANDSHAKE, b"c hs traffic"
         )
-        self.key_schedule.update_hash(input_buf.data)
+        # print(f'c hs traffic: {self._enc_key.hex()}') # CLIENT HANDSHAKE TRAFFIC SECRET
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Hash After Encrypted Extensions: {self.key_schedule.hash}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
+        self.key_schedule.update_hash(input_buf.data)
 
         # if the server accepted our PSK we are done, other we want its certificate
         if self._session_resumed:
@@ -1756,12 +1765,12 @@ class Context:
     def _client_handle_certificate(self, input_buf: Buffer) -> None:
         certificate = pull_certificate(input_buf)
 
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Certificate: {certificate}\n")
-        print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Certificate: {certificate}\n")
+        # print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._certificate_transcript = input_buf.data
         self._transcript += input_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         self.key_schedule.update_hash(input_buf.data)
 
@@ -1785,12 +1794,12 @@ class Context:
                 server_name=self._server_name,
             )
 
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Certificate Verify: {verify}\n")
-        print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Certificate Verify: {verify}\n")
+        # print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._certificate_verify_transcript = input_buf.data
         self._transcript += input_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         self.key_schedule.update_hash(input_buf.data)
         self._set_state(State.CLIENT_EXPECT_FINISHED)
@@ -1798,12 +1807,12 @@ class Context:
     def _client_handle_finished(self, input_buf: Buffer, output_buf: Buffer) -> None:
         finished = pull_finished(input_buf)
         
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(f"Finished: {finished}\n")
-        print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(f"Finished: {finished}\n")
+        # print(f"Input Buffer: {input_buf.data}")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._finished_transcript = input_buf.data
         self._transcript += input_buf.data
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
 
         # check verify data
         expected_verify_data = self.key_schedule.finished_verify_data(self._dec_key)

@@ -65,6 +65,8 @@ from .packet_builder import (
 from .recovery import QuicPacketRecovery, QuicPacketSpace
 from .stream import FinalSizeError, QuicStream, StreamFinishedError
 
+from functions import *
+
 logger = logging.getLogger("quic")
 
 CRYPTO_BUFFER_SIZE = 16384
@@ -559,6 +561,7 @@ class QuicConnection:
                         frame_type=self._close_event.frame_type,
                         reason_phrase=self._close_event.reason_phrase,
                     )
+
             self._logger.info(
                 "Connection close sent (code 0x%X, reason %s)",
                 self._close_event.error_code,
@@ -1130,6 +1133,8 @@ class QuicConnection:
                 space.ack_queue.add(packet_number)
                 if is_ack_eliciting and space.ack_at is None:
                     space.ack_at = now + self._ack_delay
+
+        quic_packet_decompose('SERVER', quic_logger_frames, plain_payload, data[len(plain_header):len(plain_header+plain_payload)])
 
     def request_key_update(self) -> None:
         """
@@ -2768,9 +2773,6 @@ class QuicConnection:
         if secrets_log_file is not None:
             label_row = self._is_client == (direction == tls.Direction.DECRYPT)
             label = SECRETS_LABELS[label_row][epoch.value]
-
-            if label == 'CLIENT_HANDSHAKE_TRAFFIC_SECRET':
-                self.tls._client_hanshake_secret = secret.hex()
 
             secrets_log_file.write(
                 "%s %s %s\n" % (label, self.tls.client_random.hex(), secret.hex())
