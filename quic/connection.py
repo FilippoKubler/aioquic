@@ -1134,7 +1134,8 @@ class QuicConnection:
                 if is_ack_eliciting and space.ack_at is None:
                     space.ack_at = now + self._ack_delay
 
-        quic_packet_decompose('SERVER', quic_logger_frames, plain_payload, data[len(plain_header):len(plain_header+plain_payload)])
+            # FROM SERVER
+            quic_packet_decompose('SERVER', quic_logger_frames, plain_payload, data[len(plain_header):len(plain_header+plain_payload)])
 
     def request_key_update(self) -> None:
         """
@@ -1636,7 +1637,6 @@ class QuicConnection:
             # pass data to TLS layer
             try:
                 self.tls.handle_message(event.data, self._crypto_buffers)
-                # print(f"Transcript: {self.tls._transcript}")
                 
                 self._push_crypto_data()
             except tls.Alert as exc:
