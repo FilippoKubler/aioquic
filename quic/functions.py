@@ -1,8 +1,21 @@
+import logging.config
+import sys, os
+import logging
+
 from colorama import Fore, Style
 '''
 Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET.
 Style: DIM, NORMAL, BRIGHT, RESET_ALL
 '''
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+    
 
 residual_packet_size        = 0
 residual_handshake_type     = ''
@@ -25,6 +38,10 @@ def quic_length_decoder(length):
 
 def quic_packet_decompose(peer, quic_logger_frames, plain_payload, encrypted_payload):
     global residual_packet_size, residual_handshake_type, fragmented_packet_payload
+    
+    if logging.root.level == logging.INFO:
+        blockPrint()
+
     print('Residual bytes from previous QUIC Packet:', residual_handshake_type, residual_packet_size, end='\n')
     
     peer = (Fore.BLUE + peer) if peer == 'CLIENT' else (Fore.RED + peer)
@@ -128,3 +145,6 @@ def quic_packet_decompose(peer, quic_logger_frames, plain_payload, encrypted_pay
                     print(peer, f'- Plaintext Packet | {Fore.WHITE}PADDING:{Fore.RESET}', padding_length, plain_payload.hex(), '\n')
 
     print(peer, f'- \033[4mEncrypted Packet\033[0m:', encrypted_payload.hex(), '\n\n')
+    
+    if logging.root.level == logging.INFO:
+        enablePrint()
