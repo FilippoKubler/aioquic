@@ -335,6 +335,7 @@ class QuicPacketBuilder:
                 self._packet_number,
             )
             
+            # TO SERVER
             quic_packet_decompose('CLIENT', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
 
             buf.push_bytes(self._encrypted_packet)
