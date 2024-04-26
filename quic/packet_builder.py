@@ -17,7 +17,7 @@ from .packet import (
     is_long_header,
 )
 
-from .functions import *
+from .quic_datagram_decomposer import *
 
 PACKET_LENGTH_SEND_SIZE = 2
 PACKET_NUMBER_SEND_SIZE = 2
@@ -336,7 +336,7 @@ class QuicPacketBuilder:
             )
             
             # TO SERVER
-            quic_packet_decompose('CLIENT', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
+            quic_datagram_decomposer('CLIENT', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
 
             buf.push_bytes(self._encrypted_packet)
             self._packet.sent_bytes = buf.tell() - self._packet_start

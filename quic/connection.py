@@ -65,7 +65,7 @@ from .packet_builder import (
 from .recovery import QuicPacketRecovery, QuicPacketSpace
 from .stream import FinalSizeError, QuicStream, StreamFinishedError
 
-from .functions import *
+from .quic_datagram_decomposer import *
 
 logger = logging.getLogger("quic")
 
@@ -1135,7 +1135,7 @@ class QuicConnection:
                     space.ack_at = now + self._ack_delay
 
             # FROM SERVER
-            quic_packet_decompose('SERVER', quic_logger_frames, plain_payload, data[len(plain_header):len(plain_header+plain_payload)])
+            quic_datagram_decomposer('SERVER', quic_logger_frames, plain_payload, data[start_off+len(plain_header):start_off+len(plain_header+plain_payload)])
 
     def request_key_update(self) -> None:
         """
