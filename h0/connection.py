@@ -18,7 +18,8 @@ class H0Connection:
         self._is_client = quic.configuration.is_client
         self._quic = quic
 
-        self._http3_request = ""
+        # CUSTOM PARAMETERS
+        self._http_request = ""
 
     def handle_event(self, event: QuicEvent) -> List[H3Event]:
         http_events: List[H3Event] = []

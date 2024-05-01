@@ -400,6 +400,7 @@ class H3Connection:
         self._received_settings: Optional[Dict[int, int]] = None
         self._sent_settings: Optional[Dict[int, int]] = None
 
+        # CUSTOM PARAMETERS
         self._http3_request = ""
 
         self._init_connection()

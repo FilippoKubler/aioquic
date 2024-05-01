@@ -103,6 +103,7 @@ class QuicPacketBuilder:
         self._buffer_capacity = max_datagram_size
         self._flight_capacity = max_datagram_size
 
+        # CUSTOM PARAMETERS
         self._encrypted_packet = b""
 
     @property
@@ -336,7 +337,7 @@ class QuicPacketBuilder:
             )
             
             # TO SERVER
-            quic_datagram_decomposer('CLIENT', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
+            packets_transcript_json = quic_datagram_decomposer(' CLIENT ', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])
 
             buf.push_bytes(self._encrypted_packet)
             self._packet.sent_bytes = buf.tell() - self._packet_start

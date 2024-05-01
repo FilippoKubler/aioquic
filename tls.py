@@ -1334,20 +1334,6 @@ class Context:
         self._dec_key: Optional[bytes] = None
         self.__logger = logger
 
-        self._transcript                        = b""
-        self._client_hello_transcript           = b""
-        self._server_hello_transcript           = b""
-        self._encrypted_extensions_transcript   = b""
-        self._certificate_transcript            = b""
-        self._certificate_verify_transcript     = b""
-        self._finished_transcript               = b""
-
-        self._handshake_secret                  = ""
-        self._client_handshake_secret           = ""
-        self._server_handshake_secret           = ""
-
-        self._http3_request                     = ""
-
         self._ec_private_key: Optional[ec.EllipticCurvePrivateKey] = None
         self._x25519_private_key: Optional[x25519.X25519PrivateKey] = None
         self._x448_private_key: Optional[x448.X448PrivateKey] = None
@@ -1360,6 +1346,19 @@ class Context:
             self.client_random = None
             self.legacy_session_id = None
             self.state = State.SERVER_EXPECT_CLIENT_HELLO
+        
+        # CUSTOM PARAMETERS
+        self._transcript                        = b""
+        self._client_hello_transcript           = b""
+        self._server_hello_transcript           = b""
+        self._encrypted_extensions_transcript   = b""
+        self._certificate_transcript            = b""
+        self._certificate_verify_transcript     = b""
+        self._finished_transcript               = b""
+
+        self._handshake_secret                  = ""
+        self._client_handshake_secret           = ""
+        self._server_handshake_secret           = ""
 
     @property
     def session_resumed(self) -> bool:

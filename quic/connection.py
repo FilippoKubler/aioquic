@@ -449,6 +449,11 @@ class QuicConnection:
             0x31: (self._handle_datagram_frame, EPOCHS("01")),
         }
 
+
+        # CUSTOM PARAMETERS
+        self.packets_transcript_json = {}
+
+
     @property
     def configuration(self) -> QuicConfiguration:
         return self._configuration
@@ -1135,7 +1140,7 @@ class QuicConnection:
                     space.ack_at = now + self._ack_delay
 
             # FROM SERVER
-            quic_datagram_decomposer('SERVER', quic_logger_frames, plain_payload, data[start_off+len(plain_header):start_off+len(plain_header+plain_payload)])
+            self.packets_transcript_json = quic_datagram_decomposer(' SERVER ', quic_logger_frames, plain_payload, data[start_off+len(plain_header):start_off+len(plain_header+plain_payload)])
 
     def request_key_update(self) -> None:
         """
