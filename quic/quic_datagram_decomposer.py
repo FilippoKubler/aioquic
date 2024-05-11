@@ -124,7 +124,7 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
     if logging.root.level == logging.INFO:
         blockPrint()
     
-    peer = (Colors.BLUE + peer) if peer == 'CLIENT' else (Colors.RED + peer)
+    peer = (Colors.BLUE + peer) if 'CLIENT' in peer else (Colors.RED + peer)
     peer += Colors.END
 
     print('\n\n' + '~'*95)
