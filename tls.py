@@ -1359,6 +1359,7 @@ class Context:
         self._handshake_secret                  = ""
         self._client_handshake_secret           = ""
         self._server_handshake_secret           = ""
+        self._client_application_secret         = ""
 
     @property
     def session_resumed(self) -> bool:
@@ -1722,6 +1723,7 @@ class Context:
             Direction.DECRYPT, Epoch.HANDSHAKE, b"s hs traffic"
         )
         # print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
+        self._server_handshake_secret = self._dec_key.hex()
 
         self._set_state(State.CLIENT_EXPECT_ENCRYPTED_EXTENSIONS)
 
@@ -1747,6 +1749,7 @@ class Context:
             Direction.ENCRYPT, Epoch.HANDSHAKE, b"c hs traffic"
         )
         # print(f'c hs traffic: {self._enc_key.hex()}') # CLIENT HANDSHAKE TRAFFIC SECRET
+        self._client_handshake_secret = self._enc_key.hex()
 
         self.key_schedule.update_hash(input_buf.data)
 
@@ -1826,6 +1829,7 @@ class Context:
             Direction.DECRYPT, Epoch.ONE_RTT, b"s ap traffic"
         )
         next_enc_key = self.key_schedule.derive_secret(b"c ap traffic")
+        self._client_application_secret = next_enc_key.hex()
 
         if self._certificate_request is not None:
             # check whether we have a suitable signature algorithm
