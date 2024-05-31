@@ -61,6 +61,11 @@ class CryptoContext:
         self._setup_cb = setup_cb
         self._teardown_cb = teardown_cb
 
+        # CUSTOM PARAMETERS
+        self._quic_key  = ''
+        self._quic_iv   = ''
+
+
     def decrypt_packet(
         self, packet: bytes, encrypted_offset: int, expected_packet_number: int
     ) -> Tuple[bytes, bytes, int, bool]:
@@ -111,6 +116,12 @@ class CryptoContext:
         hp_cipher_name, aead_cipher_name = CIPHER_SUITES[cipher_suite]
 
         key, iv, hp = derive_key_iv_hp(cipher_suite, secret)
+        
+        self._quic_key  = key.hex()
+        print('KEY:', self._quic_key)
+        self._quic_iv   = iv.hex()
+        print('IV:', self._quic_iv)
+
         self.aead = AEAD(aead_cipher_name, key, iv)
         self.cipher_suite = cipher_suite
         self.hp = HeaderProtection(hp_cipher_name, hp)
