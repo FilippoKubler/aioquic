@@ -1830,6 +1830,7 @@ class Context:
         )
         next_enc_key = self.key_schedule.derive_secret(b"c ap traffic")
         self._client_application_secret = next_enc_key.hex()
+        print(f'c ap traffic: {next_enc_key.hex()}') # CLIENT APPLICATION TRAFFIC SECRET
 
         if self._certificate_request is not None:
             # check whether we have a suitable signature algorithm

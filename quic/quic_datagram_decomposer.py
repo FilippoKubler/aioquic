@@ -193,7 +193,8 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
                         packets_transcript_json[peer.split()[1] + '-' + residual_tls13_handshake_type.split()[1]] = {
                             'length': fragmented_packet_size + residual_packet_size,
                             'plaintext': fragmented_plain_packet_payload.hex() + residual_plain_payload.hex(),
-                            'ciphertext': fragmented_encrypted_packet_payload.hex() + residual_encrypted_payload.hex()
+                            'ciphertext': fragmented_encrypted_packet_payload.hex() + residual_encrypted_payload.hex(),
+                            'CRYPTO-Frame': encrypted_crypto_header.hex() + encrypted_crypto_payload.hex()
                         }
 
                         # Remove residual bytes from Plaintext and Ciphertext
