@@ -1722,7 +1722,7 @@ class Context:
         self._setup_traffic_protection(
             Direction.DECRYPT, Epoch.HANDSHAKE, b"s hs traffic"
         )
-        # print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
+        print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
         self._server_handshake_secret = self._dec_key.hex()
 
         self._set_state(State.CLIENT_EXPECT_ENCRYPTED_EXTENSIONS)
@@ -2209,6 +2209,7 @@ class Context:
     def _setup_traffic_protection(
         self, direction: Direction, epoch: Epoch, label: bytes
     ) -> None:
+        print(str(label))
         key = self.key_schedule.derive_secret(label)
 
         if direction == Direction.ENCRYPT:

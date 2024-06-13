@@ -14,6 +14,7 @@ INITIAL_CIPHER_SUITE = CipherSuite.AES_128_GCM_SHA256
 INITIAL_SALT_DRAFT_29 = binascii.unhexlify("afbfec289993d24c9e9786f19c6111e04390a899")
 INITIAL_SALT_VERSION_1 = binascii.unhexlify("38762cf7f55934b34d179ae6a4c80cadccbb7f0a")
 SAMPLE_SIZE = 16
+AEAD_NONCE_LENGTH = 12
 
 
 Callback = Callable[[str], None]
@@ -40,7 +41,7 @@ def derive_key_iv_hp(
         key_size = 16
     return (
         hkdf_expand_label(algorithm, secret, b"quic key", b"", key_size),
-        hkdf_expand_label(algorithm, secret, b"quic iv", b"", 12),
+        hkdf_expand_label(algorithm, secret, b"quic iv", b"", AEAD_NONCE_LENGTH),
         hkdf_expand_label(algorithm, secret, b"quic hp", b"", key_size),
     )
 
@@ -62,8 +63,10 @@ class CryptoContext:
         self._teardown_cb = teardown_cb
 
         # CUSTOM PARAMETERS
-        self._quic_key  = ''
-        self._quic_iv   = ''
+        self._quic_key          = ''
+        self._quic_iv           = ''
+        self._packet_number     = ''
+        self._nonce             = bytearray(AEAD_NONCE_LENGTH)
 
 
     def decrypt_packet(
@@ -81,6 +84,18 @@ class CryptoContext:
         packet_number = decode_packet_number(
             packet_number, pn_length * 8, expected_packet_number
         )
+        self._packet_number = packet_number
+        print('Packet Number:', self._packet_number)
+
+        # Compute Nonce from IV and Packet Number
+        # memcpy(self->nonce, self->iv, AEAD_NONCE_LENGTH);
+        # for (int i = 0; i < 8; ++i) {
+        #     self->nonce[AEAD_NONCE_LENGTH - 1 - i] ^= (uint8_t)(pn >> 8 * i);
+        # }
+        self._nonce = bytearray.fromhex(self._quic_iv)
+        for i in range(8):
+            self._nonce[AEAD_NONCE_LENGTH - 1 - i] ^= ((packet_number >> 8 * i) & 0xFF)
+        print('Calculated Nonce:', self._nonce.hex())
 
         # detect key phase change
         crypto = self
@@ -118,9 +133,9 @@ class CryptoContext:
         key, iv, hp = derive_key_iv_hp(cipher_suite, secret)
         
         self._quic_key  = key.hex()
-        print('KEY:', self._quic_key)
+        # print('KEY:', self._quic_key)
         self._quic_iv   = iv.hex()
-        print('IV:', self._quic_iv)
+        # print('IV:', self._quic_iv)
 
         self.aead = AEAD(aead_cipher_name, key, iv)
         self.cipher_suite = cipher_suite

@@ -2790,9 +2790,12 @@ class QuicConnection:
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
         else:
+            print(label, secret.hex())
             crypto.recv.setup(
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
+            print('KEY:', crypto.recv._quic_key)
+            print('IV:', crypto.recv._quic_iv)
 
     def _write_application(
         self, builder: QuicPacketBuilder, network_path: QuicNetworkPath, now: float
