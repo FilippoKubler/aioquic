@@ -65,6 +65,7 @@ class CryptoContext:
         # CUSTOM PARAMETERS
         self._quic_key          = ''
         self._quic_iv           = ''
+        self._quic_hp           = ''
         self._packet_number     = ''
         self._nonce             = bytearray(AEAD_NONCE_LENGTH)
 
@@ -133,9 +134,8 @@ class CryptoContext:
         key, iv, hp = derive_key_iv_hp(cipher_suite, secret)
         
         self._quic_key  = key.hex()
-        # print('KEY:', self._quic_key)
         self._quic_iv   = iv.hex()
-        # print('IV:', self._quic_iv)
+        self._quic_hp   = hp.hex()
 
         self.aead = AEAD(aead_cipher_name, key, iv)
         self.cipher_suite = cipher_suite

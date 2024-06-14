@@ -132,11 +132,11 @@ AEAD_decrypt(AEADObject *self, PyObject *args)
     for (int i = 0; i < 8; ++i) {
         self->nonce[AEAD_NONCE_LENGTH - 1 - i] ^= (uint8_t)(pn >> 8 * i);
     }
-    printf("Decrypt - Real Nonce: ");
-    for (int i = 0; i < AEAD_NONCE_LENGTH; ++i) {
-        printf("%x", self->nonce[i] & 0xff);
-    }
-    printf("\n");
+    // printf("Decrypt - Real Nonce: ");
+    // for (int i = 0; i < AEAD_NONCE_LENGTH; ++i) {
+    //     printf("%x", self->nonce[i] & 0xff);
+    // }
+    // printf("\n");
 
     res = EVP_CIPHER_CTX_ctrl(self->decrypt_ctx, EVP_CTRL_CCM_SET_TAG, AEAD_TAG_LENGTH, (void*)(data + (data_len - AEAD_TAG_LENGTH)));
     CHECK_RESULT(res != 0);
@@ -179,11 +179,11 @@ AEAD_encrypt(AEADObject *self, PyObject *args)
     for (int i = 0; i < 8; ++i) {
         self->nonce[AEAD_NONCE_LENGTH - 1 - i] ^= (uint8_t)(pn >> 8 * i);
     }
-    // printf("Encrypt - Real Nonce: ");
-    // for (int i = 0; i < AEAD_NONCE_LENGTH; ++i) {
-    //     printf("%x", self->nonce[i] & 0xff);
-    // }
-    // printf("\n");
+    printf("Encrypt - Real Nonce: ");
+    for (int i = 0; i < AEAD_NONCE_LENGTH; ++i) {
+        printf("%x", self->nonce[i] & 0xff);
+    }
+    printf("\n");
 
     res = EVP_CipherInit_ex(self->encrypt_ctx, NULL, NULL, self->key, self->nonce, 1);
     CHECK_RESULT(res != 0);

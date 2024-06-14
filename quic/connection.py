@@ -2786,16 +2786,19 @@ class QuicConnection:
 
         crypto = self._cryptos[epoch]
         if direction == tls.Direction.ENCRYPT:
+            print(label, secret.hex())
             crypto.send.setup(
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
+            print('KEY:', crypto.send._quic_key)
+            print('IV:', crypto.send._quic_iv)
         else:
-            print(label, secret.hex())
+            # print(label, secret.hex())
             crypto.recv.setup(
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
-            print('KEY:', crypto.recv._quic_key)
-            print('IV:', crypto.recv._quic_iv)
+            # print('KEY:', crypto.recv._quic_key)
+            # print('IV:', crypto.recv._quic_iv)
 
     def _write_application(
         self, builder: QuicPacketBuilder, network_path: QuicNetworkPath, now: float

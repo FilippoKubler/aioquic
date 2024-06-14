@@ -301,7 +301,8 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
                     packets_transcript_json[peer.split()[1] + '-' + http3_direction] = {
                         'length': stream_length,
                         'plaintext': plain_stream_payload.hex(),
-                        'ciphertext': encrypted_stream_payload.hex()
+                        'ciphertext': encrypted_stream_payload.hex(),
+                        'STREAM-Frame': encrypted_stream_header.hex() + encrypted_stream_payload.hex()
                     }
 
                     print(f'{Colors.DARK_GRAY}STREAM{Colors.END}:', stream_header_length, plain_stream_header.hex(), f'| {Colors.LIGHT_GRAY}{http3_direction}{Colors.END}:', frame['length'], plain_stream_payload.hex(), '\n')
