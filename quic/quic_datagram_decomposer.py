@@ -84,21 +84,21 @@ def extract_tls13_handshake_type(peer, tls13_handshake_type_byte):
 
     match(tls13_handshake_type_byte):
         case '01':
-            tls13_handshake_type += 'ClientHello'
+            tls13_handshake_type += ' ClientHello '
         case '02':
-            tls13_handshake_type += 'ServerHello'
+            tls13_handshake_type += ' ServerHello '
         case '04':
-            tls13_handshake_type += 'NewSessionTicket'
+            tls13_handshake_type += ' NewSessionTicket '
         case '08':
-            tls13_handshake_type += 'EncryptedExtensions'
+            tls13_handshake_type += ' EncryptedExtensions '
         case '0b':
-            tls13_handshake_type += 'Certificate'
+            tls13_handshake_type += ' Certificate '
         case '0f':
-            tls13_handshake_type += 'CertificateVerify'
+            tls13_handshake_type += ' CertificateVerify '
         case '14':
-            tls13_handshake_type += 'Finished'
+            tls13_handshake_type += ' Finished '
         case _:
-            tls13_handshake_type += 'NotFound'
+            tls13_handshake_type += ' NotFound '
    
     tls13_handshake_type += Colors.END
 
