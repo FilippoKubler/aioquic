@@ -335,6 +335,9 @@ class QuicPacketBuilder:
                 plain[self._header_size : packet_size],
                 self._packet_number,
             )
+
+                
+            # print('\n\n', plain.hex(), '\n\n', self._encrypted_packet.hex(), '\n\n')
             
             # TO SERVER
             packets_transcript_json = quic_datagram_decomposer(' CLIENT ', self.quic_logger_frames, plain[self._header_size : packet_size], self._encrypted_packet[self._header_size : packet_size])

@@ -79,27 +79,27 @@ def quic_length_decoder(field: bytes) -> int:
 
 
 def extract_tls13_handshake_type(peer, tls13_handshake_type_byte):
-    
+
     tls13_handshake_type = Colors.LIGHT_BLUE if 'CLIENT' in peer else Colors.LIGHT_RED
 
     match(tls13_handshake_type_byte):
         case '01':
-            tls13_handshake_type += ' ClientHello '
+            tls13_handshake_type += 'ClientHello'
         case '02':
-            tls13_handshake_type += ' ServerHello '
+            tls13_handshake_type += 'ServerHello'
         case '04':
-            tls13_handshake_type += ' NewSessionTicket '
+            tls13_handshake_type += 'NewSessionTicket'
         case '08':
-            tls13_handshake_type += ' EncryptedExtensions '
+            tls13_handshake_type += 'EncryptedExtensions'
         case '0b':
-            tls13_handshake_type += ' Certificate '
+            tls13_handshake_type += 'Certificate'
         case '0f':
-            tls13_handshake_type += ' CertificateVerify '
+            tls13_handshake_type += 'CertificateVerify'
         case '14':
-            tls13_handshake_type += ' Finished '
+            tls13_handshake_type += 'Finished'
         case _:
-            tls13_handshake_type += ' NotFound '
-
+            tls13_handshake_type += 'NotFound'
+   
     tls13_handshake_type += Colors.END
 
     return tls13_handshake_type
@@ -203,7 +203,7 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
 
                         # RESET Parameters
                         residual_peer                       = ''
-                        residual_tls13_handshake_type             = ''
+                        residual_tls13_handshake_type       = ''
                         residual_packet_size                = 0
                         fragmented_plain_packet_payload     = b''
                         fragmented_encrypted_packet_payload = b''
@@ -221,7 +221,7 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
                         if len(plain_crypto_payload) == 0:
                             break
 
-                        tls13_handsahke_type = extract_tls13_handshake_type(peer, plain_crypto_payload[:1].hex())
+                        tls13_handshake_type = extract_tls13_handshake_type(peer, plain_crypto_payload[:1].hex())
                         
                         handshake_packet_length = (int(plain_crypto_payload[1:4].hex(), 16) + 4) # + 4 = 3 bytes of the length field + 1 byte of the type field (of CRYPTO FRAMES)
 
@@ -231,7 +231,7 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
                         if len(plain_crypto_payload) < handshake_packet_length:
                             residual_packet_size                = handshake_packet_length - len(plain_crypto_payload)
                             fragmented_packet_size              = len(plain_crypto_payload)
-                            residual_tls13_handshake_type       = tls13_handsahke_type
+                            residual_tls13_handshake_type       = tls13_handshake_type
                             fragmented_plain_packet_payload     = plain_crypto_payload[:handshake_packet_length]
                             fragmented_encrypted_packet_payload = encrypted_crypto_payload[:handshake_packet_length]
                             residual_peer                       = peer
@@ -245,18 +245,18 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
                             continue
 
                         # Print detected Packets
-                        if 'NotFound' not in tls13_handsahke_type:
+                        if 'NotFound' not in tls13_handshake_type:
 
-                            packets_transcript_json[peer.split()[1] + '-' + tls13_handsahke_type.split()[1]] = {
+                            packets_transcript_json[peer.split()[1] + '-' + tls13_handshake_type.split()[1]] = {
                                 'length': handshake_packet_length,
                                 'plaintext': plain_crypto_payload[:handshake_packet_length].hex(),
                                 'ciphertext': encrypted_crypto_payload[:handshake_packet_length].hex()
                             }
 
-                            print(f'{tls13_handsahke_type}:', handshake_packet_length, plain_crypto_payload[:handshake_packet_length].hex(), end=' | ')
+                            print(f'{tls13_handshake_type}:', handshake_packet_length, plain_crypto_payload[:handshake_packet_length].hex(), end=' | ')
                             plain_crypto_payload = plain_crypto_payload[handshake_packet_length:]
 
-                            encrypted_string += f'{tls13_handsahke_type}: {handshake_packet_length} {encrypted_crypto_payload[:handshake_packet_length].hex()} | '
+                            encrypted_string += f'{tls13_handshake_type}: {handshake_packet_length} {encrypted_crypto_payload[:handshake_packet_length].hex()} | '
                             encrypted_crypto_payload = encrypted_crypto_payload[handshake_packet_length:]
 
                     # Remove CRYPTO Frame from Plaintext and Ciphertext
