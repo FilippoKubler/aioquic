@@ -401,7 +401,8 @@ class H3Connection:
         self._sent_settings: Optional[Dict[int, int]] = None
 
         # CUSTOM PARAMETERS
-        self._http3_request = ""
+        self._http3_request     = ""
+        self._allowed_headers   = ""
 
         self._init_connection()
 
@@ -575,6 +576,9 @@ class H3Connection:
         if stream.headers_send_state == HeadersState.AFTER_TRAILERS:
             raise FrameUnexpected("HEADERS frame is not allowed in this state")
 
+        # a = self._encode_headers(stream_id, allowed_headers)
+        # print('Allowed Headers:', a.hex(), allowed_headers)
+        # self._allowed_headers = a.hex()
         frame_data = self._encode_headers(stream_id, headers)
 
         # log frame
@@ -652,6 +656,7 @@ class H3Connection:
         # print('Frame Data:', frame_data, frame_data.hex())
         self._encoder_bytes_sent += len(encoder)
         self._quic.send_stream_data(self._local_encoder_stream_id, encoder)
+
         return frame_data
 
     def _get_or_create_stream(self, stream_id: int) -> H3Stream:
