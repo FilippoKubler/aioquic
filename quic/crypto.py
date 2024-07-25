@@ -86,7 +86,7 @@ class CryptoContext:
             packet_number, pn_length * 8, expected_packet_number
         )
         self._packet_number = packet_number
-        print('Packet Number:', self._packet_number)
+        # print('Packet Number:', self._packet_number)
 
         # Compute Nonce from IV and Packet Number
         # memcpy(self->nonce, self->iv, AEAD_NONCE_LENGTH);
@@ -96,7 +96,7 @@ class CryptoContext:
         self._nonce = bytearray.fromhex(self._quic_iv)
         for i in range(8):
             self._nonce[AEAD_NONCE_LENGTH - 1 - i] ^= ((packet_number >> 8 * i) & 0xFF)
-        print('Calculated Nonce:', self._nonce.hex())
+        # print('Calculated Nonce:', self._nonce.hex())
 
         # detect key phase change
         crypto = self
