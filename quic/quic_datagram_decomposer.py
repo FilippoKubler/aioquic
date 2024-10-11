@@ -344,3 +344,243 @@ def quic_datagram_decomposer(peer: str, quic_logger_frames, plain_payload: bytes
         enablePrint()
 
     return packets_transcript_json
+
+
+def quic_datagram_decomposer_capture(peer: str, quic_logger_frames, plain_payload: bytes, encrypted_payload: bytes, packets_transcript_json_capture) -> dict:
+    """
+    Decompose QUIC Datagram into Frames and extract TLS1.3 Hnadshake Packets and HTTP3 Requests and Responses.
+
+    :param peer:                side of the communication (CLIENT or SERVER).
+    :param quic_logger_frames:  List of Dicts where are saved which types of Frames are inside the QUIC Datagram.
+    :param plain_payload:       QUIC Datagram Plaintext.
+    :param encrypted_payload:   QUIC Datagram Ciphertext.
+    """
+
+    # Variables to handle fragmented packets
+    global residual_packet_size, fragmented_packet_size, residual_tls13_handshake_type, fragmented_plain_packet_payload, fragmented_encrypted_packet_payload, residual_peer
+    
+
+    # Disable print if --verbose arg is not used
+    if logging.root.level == logging.INFO:
+        blockPrint()
+    
+    peer = (Colors.BLUE + peer) if 'CLIENT' in peer else (Colors.RED + peer)
+    peer += Colors.END
+
+    print('\n\n' + '~'*95)
+    print('~'*23 + f'\t\t{peer} - Plaintext Packet\t\t'.ljust(35) + '~'*23)
+    print('~'*95 + '\n')
+
+    # Print info about which frame is fragmented and how many bytes are expected to complete the frame
+    if residual_packet_size > 0 and peer in residual_peer:
+        print('Residual bytes from previous QUIC Packet:', residual_tls13_handshake_type, residual_packet_size, end='\n\n')
+
+    print(quic_logger_frames)
+    
+    # Lengths of the Frames of interest
+    plain_length                = len(plain_payload)
+    ack_length                  = 0
+    crypto_length               = 0
+    padding_length              = 0
+    stream_length               = 0
+    connection_close_length     = 0
+
+    encrypted_string = ''
+
+    for frame in quic_logger_frames:
+        match(frame['frame_type']):
+            case 'ack':
+                if plain_payload[:1].hex() == '02': # ACK Frame
+                    ack_length = 6 # All field are Variable-Length Integers
+                    
+                    print(f'{Colors.YELLOW}ACK{Colors.END}:', ack_length, plain_payload[:ack_length].hex(), '\n')
+                    plain_payload = plain_payload[ack_length:]
+
+                    encrypted_string += f'{Colors.YELLOW}ACK{Colors.END}: {ack_length} {encrypted_payload[:ack_length].hex()}\n\n'
+                    encrypted_payload = encrypted_payload[ack_length:]
+            
+            case 'crypto':
+                if plain_payload[:1].hex() == '06': # CRYPTO Frame
+
+                    crypto_header_length = 1
+
+                    offset_size = quic_length_decoder(plain_payload[crypto_header_length:crypto_header_length+1])
+                    crypto_header_length += offset_size
+
+                    length_size = quic_length_decoder(plain_payload[crypto_header_length:crypto_header_length+1])
+                    crypto_header_length += length_size
+                    
+                    # CRYPTO Frame length
+                    crypto_length               = crypto_header_length + frame['length']
+
+                    # Plaintext and Ciphertext of CRYPTO Header and Payload
+                    plain_crypto_header         = plain_payload[:crypto_header_length]
+                    plain_crypto_payload        = plain_payload[crypto_header_length : crypto_length]
+                    encrypted_crypto_header     = encrypted_payload[:crypto_header_length]
+                    encrypted_crypto_payload    = encrypted_payload[crypto_header_length : crypto_length]
+
+                    # Check if previous CRYPTO Frame was fragmented
+                    if residual_packet_size > 0:
+
+                        # Valutare caso in cui il nuovo CRYPTO non contenga tutti dati necessari a completare il pacchetto precedente
+
+                        residual_plain_payload  = plain_crypto_payload[:residual_packet_size]
+                        print(f'\n{Colors.BLACK}Residaul Packet Payload{Colors.END} | {residual_tls13_handshake_type}:', fragmented_packet_size, fragmented_plain_packet_payload.hex(), '-', residual_packet_size, residual_plain_payload.hex(), end=' .\n\n')
+
+                        residual_encrypted_payload = encrypted_crypto_payload[:residual_packet_size]
+                        encrypted_string += f'\n{Colors.BLACK}Residaul Packet Payload{Colors.END} | {residual_tls13_handshake_type}: {fragmented_packet_size} {fragmented_encrypted_packet_payload.hex()} - {residual_packet_size} {residual_encrypted_payload.hex()} .\n\n'
+                        
+                        packets_transcript_json_capture[peer.split()[1] + '-' + residual_tls13_handshake_type.split()[1]] = {
+                            'length': fragmented_packet_size + residual_packet_size,
+                            'plaintext': fragmented_plain_packet_payload.hex() + residual_plain_payload.hex(),
+                            'ciphertext': fragmented_encrypted_packet_payload.hex() + residual_encrypted_payload.hex(),
+                            'CRYPTO-Frame': encrypted_crypto_header.hex() + encrypted_crypto_payload.hex()
+                        }
+
+                        # Remove residual bytes from Plaintext and Ciphertext
+                        plain_crypto_payload                = plain_crypto_payload[residual_packet_size:]
+                        encrypted_crypto_payload            = encrypted_crypto_payload[residual_packet_size:]
+
+                        # RESET Parameters
+                        residual_peer                       = ''
+                        residual_tls13_handshake_type       = ''
+                        residual_packet_size                = 0
+                        fragmented_plain_packet_payload     = b''
+                        fragmented_encrypted_packet_payload = b''
+                        fragmented_packet_size              = 0
+
+
+                    print(f'{Colors.GREEN}CRYPTO{Colors.END}:', crypto_header_length, plain_crypto_header.hex(), end=' | ')
+
+                    encrypted_string += f'{Colors.GREEN}CRYPTO{Colors.END}: {crypto_header_length} {encrypted_crypto_header.hex()} | '
+                    
+                    # Loop to find all Packets inside CRYPTO Frame
+                    while True:
+
+                        # End when all Packets are categorized
+                        if len(plain_crypto_payload) == 0:
+                            break
+
+                        tls13_handshake_type = extract_tls13_handshake_type(peer, plain_crypto_payload[:1].hex())
+                        
+                        handshake_packet_length = (int(plain_crypto_payload[1:4].hex(), 16) + 4) # + 4 = 3 bytes of the length field + 1 byte of the type field (of CRYPTO FRAMES)
+
+                        # Da gestire il caso in cui siano presenti più Pacchetti nello stesso Record Layer
+
+                        # Check if Packet is Fragmented
+                        if len(plain_crypto_payload) < handshake_packet_length:
+                            residual_packet_size                = handshake_packet_length - len(plain_crypto_payload)
+                            fragmented_packet_size              = len(plain_crypto_payload)
+                            residual_tls13_handshake_type       = tls13_handshake_type
+                            fragmented_plain_packet_payload     = plain_crypto_payload[:handshake_packet_length]
+                            fragmented_encrypted_packet_payload = encrypted_crypto_payload[:handshake_packet_length]
+                            residual_peer                       = peer
+
+                            print(f'{Colors.BLACK}FRAGMENTED{Colors.END} - {residual_tls13_handshake_type}:', handshake_packet_length, fragmented_packet_size, fragmented_plain_packet_payload.hex(), residual_packet_size, end=' |\n')
+                            plain_crypto_payload = plain_crypto_payload[handshake_packet_length:]
+
+                            encrypted_string += f'{Colors.BLACK}FRAGMENTED{Colors.END} - {residual_tls13_handshake_type}: {handshake_packet_length} {fragmented_packet_size} {fragmented_encrypted_packet_payload.hex()} {residual_packet_size} |\n'
+                            encrypted_crypto_payload = encrypted_crypto_payload[handshake_packet_length:]
+
+                            continue
+
+                        # Print detected Packets
+                        if 'NotFound' not in tls13_handshake_type:
+
+                            packets_transcript_json_capture[peer.split()[1] + '-' + tls13_handshake_type.split()[1]] = {
+                                'length': handshake_packet_length,
+                                'plaintext': plain_crypto_payload[:handshake_packet_length].hex(),
+                                'ciphertext': encrypted_crypto_payload[:handshake_packet_length].hex()
+                            }
+
+                            print(f'{tls13_handshake_type}:', handshake_packet_length, plain_crypto_payload[:handshake_packet_length].hex(), end=' | ')
+                            plain_crypto_payload = plain_crypto_payload[handshake_packet_length:]
+
+                            encrypted_string += f'{tls13_handshake_type}: {handshake_packet_length} {encrypted_crypto_payload[:handshake_packet_length].hex()} | '
+                            encrypted_crypto_payload = encrypted_crypto_payload[handshake_packet_length:]
+
+                    # Remove CRYPTO Frame from Plaintext and Ciphertext
+                    plain_payload       = plain_payload[crypto_length:]
+                    encrypted_payload   = encrypted_payload[crypto_length:]
+
+                    print('\n')
+                    encrypted_string += '\n\n'
+            
+            case 'padding':
+                if plain_payload[:1].hex() == '00': # PADDING Frame
+                    padding_length = plain_length - ack_length - crypto_length
+                    print(f'{Colors.LIGHT_WHITE}PADDING{Colors.END}:', padding_length, plain_payload.hex(), '\n')
+
+                    encrypted_string += f'{Colors.LIGHT_WHITE}PADDING{Colors.END}: {padding_length} {encrypted_payload.hex()}\n\n'
+            
+            case 'stream':
+                if frame['stream_id'] == 0: # STREAM Frame for HTTP3
+
+                    stream_header_length = 1
+
+                    stream_size = quic_length_decoder(plain_payload[stream_header_length:stream_header_length+1])
+                    stream_header_length += stream_size
+
+                    offset_size = 0 if frame['offset'] == 0 else quic_length_decoder(plain_payload[stream_header_length:stream_header_length+1])
+                    stream_header_length += offset_size
+
+                    length_size = quic_length_decoder(plain_payload[stream_header_length:stream_header_length+1])
+                    stream_header_length += length_size
+                    
+                    # STREAM Frame length
+                    stream_length               = stream_header_length + frame['length']
+
+                    # Plaintext and Ciphertext of FRAME Header and Payload
+                    plain_stream_header         = plain_payload[:stream_header_length]
+                    plain_stream_payload        = plain_payload[stream_header_length : stream_length]
+                    encrypted_stream_header     = encrypted_payload[:stream_header_length]
+                    encrypted_stream_payload    = encrypted_payload[stream_header_length : stream_length]
+
+                    http3_direction = 'HTTP3 REQUEST' if 'CLIENT' in peer else 'HTTP3 RESPONSE'
+
+                    packets_transcript_json_capture[peer.split()[1] + '-' + http3_direction] = {
+                        'length': stream_length,
+                        'plaintext': plain_stream_payload.hex(),
+                        'ciphertext': encrypted_stream_payload.hex(),
+                        'STREAM-Frame': encrypted_stream_header.hex() + encrypted_stream_payload.hex()
+                    }
+
+                    print(f'{Colors.DARK_GRAY}STREAM{Colors.END}:', stream_header_length, plain_stream_header.hex(), f'| {Colors.LIGHT_GRAY}{http3_direction}{Colors.END}:', frame['length'], plain_stream_payload.hex(), '\n')
+                    plain_payload       = plain_payload[stream_length:]
+
+                    encrypted_string += f'{Colors.DARK_GRAY}STREAM{Colors.END}: {stream_header_length} {encrypted_stream_header.hex()} | {Colors.LIGHT_GRAY}{http3_direction}{Colors.END}: {frame["length"]} {encrypted_stream_payload.hex()}\n'
+                    encrypted_payload   = encrypted_payload[stream_length:]
+
+            case 'connection_close': # CONNECTION_CLOSE Frame (RFC 9000 19.19. CONNECTION_CLOSE Frames)
+
+                connection_close_length = len(plain_payload)
+
+                packets_transcript_json_capture[peer.split()[1] + '-ConnectionClose'] = {
+                    'length': connection_close_length,
+                    'plaintext': plain_payload.hex(),
+                    'ciphertext': encrypted_payload.hex()
+                }
+
+                if plain_payload[:1].hex() == '1d': 
+                    
+                    print(f'{Colors.BLACK}CONNECTION CLOSE{Colors.END}:', connection_close_length, plain_payload.hex(), '| Error Code:', frame['error_code'], '' if frame["reason"] == '' else f'and Reason:{frame["reason"]}', '\n')
+
+                    reason = '' if frame["reason"] == '' else f'and Reason:{frame["reason"]}'
+                    encrypted_string += f'{Colors.BLACK}CONNECTION CLOSE{Colors.END}: {connection_close_length} {encrypted_payload.hex()} | Error Code: {frame["error_code"]} {reason}\n\n'
+
+                elif plain_payload[:1].hex() == '1c':
+                    
+                    print(f'{Colors.BLACK}CONNECTION CLOSE{Colors.END}:', connection_close_length, plain_payload.hex(), '\n')
+
+                    encrypted_string += f'{Colors.BLACK}CONNECTION CLOSE{Colors.END}: {connection_close_length} {encrypted_payload.hex()}\n\n'
+
+    # Print of the encrypted parts
+    print('\n' + '~'*95)
+    print('~'*23 + f'\t\t{peer} - {Colors.UNDERLINE}Encrypted Packet{Colors.END}\t\t'.ljust(45) + '~'*23)
+    print('~'*95 + '\n')
+    print(encrypted_string + '\n\n')
+    
+    if logging.root.level == logging.INFO:
+        enablePrint()
+
+    return packets_transcript_json_capture

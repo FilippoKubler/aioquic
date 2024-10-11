@@ -1372,9 +1372,10 @@ class Context:
         self, input_data: bytes, output_buf: Dict[Epoch, Buffer]
     ) -> None:
         if self.state == State.CLIENT_HANDSHAKE_START:
-            print("\n\n**************************************************************************************")
-            print(f"Message Type: CLIENT HELLO")
-            print("**************************************************************************************\n")
+            if logging.root.level == logging.DEBUG:
+                print("\n\n**************************************************************************************")
+                print(f"Message Type: CLIENT HELLO")
+                print("**************************************************************************************\n")
 
             self._client_send_hello(output_buf[Epoch.INITIAL])
             return
@@ -1406,14 +1407,16 @@ class Context:
     def _handle_reassembled_message(
         self, message_type: int, input_buf: Buffer, output_buf: Dict[Epoch, Buffer]
     ) -> None:
-        # client states
-        print("\n\n**************************************************************************************")
-        print(f"Message Type: {HandshakeType(message_type).name}")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print(f"Output Buffer: {output_buf[Epoch.INITIAL].data}")
-        # print(f"Output Buffer: {output_buf[Epoch.HANDSHAKE].data}")
-        # print(f"Output Buffer: {output_buf[Epoch.ONE_RTT].data}")
-        print("**************************************************************************************\n")
+        
+        if logging.root.level == logging.DEBUG:
+            # client states
+            print("\n\n**************************************************************************************")
+            print(f"Message Type: {HandshakeType(message_type).name}")
+            # print(f"Input Buffer: {input_buf.data}")
+            # print(f"Output Buffer: {output_buf[Epoch.INITIAL].data}")
+            # print(f"Output Buffer: {output_buf[Epoch.HANDSHAKE].data}")
+            # print(f"Output Buffer: {output_buf[Epoch.ONE_RTT].data}")
+            print("**************************************************************************************\n")
 
         if self.state == State.CLIENT_EXPECT_SERVER_HELLO:
             if message_type == HandshakeType.SERVER_HELLO:
@@ -1643,10 +1646,6 @@ class Context:
         with push_message(self._key_schedule_proxy, output_buf):
             push_client_hello(output_buf, hello)
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Client Hello: {hello}\n")
-        # print(f"Output Buffer: {output_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._client_hello_transcript = output_buf.data
         self._transcript += output_buf.data
 
@@ -1655,10 +1654,6 @@ class Context:
     def _client_handle_hello(self, input_buf: Buffer, output_buf: Buffer) -> None:
         peer_hello = pull_server_hello(input_buf)
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Server Hello: {peer_hello}\n")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._server_hello_transcript = input_buf.data
         self._transcript += input_buf.data
 
@@ -1717,12 +1712,15 @@ class Context:
         self.key_schedule.extract(shared_key)
         
         self._handshake_secret = self.key_schedule.secret.hex()
-        # print(f'Handshake Secret: {self._handshake_secret}')
         
         self._setup_traffic_protection(
             Direction.DECRYPT, Epoch.HANDSHAKE, b"s hs traffic"
         )
-        print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
+
+        if logging.root.level == logging.DEBUG:
+            print(f'Handshake Secret: {self._handshake_secret}')
+            print(f's hs traffic: {self._dec_key.hex()}') # SERVER HANDSHAKE TRAFFIC SECRET
+
         self._server_handshake_secret = self._dec_key.hex()
 
         self._set_state(State.CLIENT_EXPECT_ENCRYPTED_EXTENSIONS)
@@ -1730,10 +1728,6 @@ class Context:
     def _client_handle_encrypted_extensions(self, input_buf: Buffer) -> None:
         encrypted_extensions = pull_encrypted_extensions(input_buf)
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Encrypted Extensions: {encrypted_extensions}\n")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")       
         self._encrypted_extensions_transcript = input_buf.data
         self._transcript += input_buf.data
 
@@ -1743,12 +1737,13 @@ class Context:
         if self.alpn_cb:
             self.alpn_cb(self.alpn_negotiated)
 
-        # print(f'Handshake Secret: {self._handshake_secret}')
-
         self._setup_traffic_protection(
             Direction.ENCRYPT, Epoch.HANDSHAKE, b"c hs traffic"
         )
-        # print(f'c hs traffic: {self._enc_key.hex()}') # CLIENT HANDSHAKE TRAFFIC SECRET
+
+        if logging.root.level == logging.DEBUG:
+            print(f'c hs traffic: {self._enc_key.hex()}') # CLIENT HANDSHAKE TRAFFIC SECRET
+
         self._client_handshake_secret = self._enc_key.hex()
 
         self.key_schedule.update_hash(input_buf.data)
@@ -1767,10 +1762,6 @@ class Context:
     def _client_handle_certificate(self, input_buf: Buffer) -> None:
         certificate = pull_certificate(input_buf)
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Certificate: {certificate}\n")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._certificate_transcript = input_buf.data
         self._transcript += input_buf.data
 
@@ -1796,10 +1787,6 @@ class Context:
                 server_name=self._server_name,
             )
 
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Certificate Verify: {verify}\n")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._certificate_verify_transcript = input_buf.data
         self._transcript += input_buf.data
 
@@ -1809,10 +1796,6 @@ class Context:
     def _client_handle_finished(self, input_buf: Buffer, output_buf: Buffer) -> None:
         finished = pull_finished(input_buf)
         
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        # print(f"Finished: {finished}\n")
-        # print(f"Input Buffer: {input_buf.data}")
-        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
         self._finished_transcript = input_buf.data
         self._transcript += input_buf.data
 
@@ -1885,7 +1868,10 @@ class Context:
             )
 
         # commit traffic key
-        print('c ap traffic')
+
+        if logging.root.level == logging.DEBUG:
+            print('c ap traffic')
+
         self._enc_key = next_enc_key
         self.update_traffic_key_cb(
             Direction.ENCRYPT,
@@ -2210,7 +2196,9 @@ class Context:
     def _setup_traffic_protection(
         self, direction: Direction, epoch: Epoch, label: bytes
     ) -> None:
-        print(str(label))
+        if logging.root.level == logging.DEBUG:
+            print(str(label))
+
         key = self.key_schedule.derive_secret(label)
 
         if direction == Direction.ENCRYPT:

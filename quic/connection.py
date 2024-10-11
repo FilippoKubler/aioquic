@@ -1280,7 +1280,7 @@ class QuicConnection:
             self._discard_epoch(epoch)
         self._events.append(self._close_event)
         self._set_state(QuicConnectionState.TERMINATED)
-        print("\n......................................................................................\n\n")
+        print("\n......................................................................................\n\n\n\n")
 
         # signal log end
         if self._quic_logger is not None:
@@ -2786,19 +2786,23 @@ class QuicConnection:
 
         crypto = self._cryptos[epoch]
         if direction == tls.Direction.ENCRYPT:
-            print(label, secret.hex())
             crypto.send.setup(
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
-            print('KEY:', crypto.send._quic_key)
-            print('IV:', crypto.send._quic_iv)
+
+            if logging.root.level == logging.DEBUG:
+                print(label, secret.hex())
+                print('KEY:', crypto.send._quic_key)
+                print('IV:', crypto.send._quic_iv)
         else:
-            # print(label, secret.hex())
             crypto.recv.setup(
                 cipher_suite=cipher_suite, secret=secret, version=self._version
             )
-            # print('KEY:', crypto.recv._quic_key)
-            # print('IV:', crypto.recv._quic_iv)
+
+            if logging.root.level == logging.DEBUG:
+                print(label, secret.hex())
+                print('KEY:', crypto.recv._quic_key)
+                print('IV:', crypto.recv._quic_iv)
 
     def _write_application(
         self, builder: QuicPacketBuilder, network_path: QuicNetworkPath, now: float

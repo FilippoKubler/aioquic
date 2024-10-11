@@ -338,7 +338,6 @@ class QuicStreamSender:
             self._buffer_fin = self._buffer_stop
             self._pending_eof = True
 
-
 class QuicStream:
     def __init__(
         self,
